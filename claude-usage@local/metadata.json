@@ -1,0 +1,6 @@
+{
+  "uuid": "claude-usage@local",
+  "name": "Uso do Claude",
+  "description": "Mostra na barra superior o uso do limite de 5 h e semanal do Claude.",
+  "shell-version": ["45", "46", "47", "48", "49"]
+}
