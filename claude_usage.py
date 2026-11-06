@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Uso do plano Claude (limite de 5 h e semanal) em JSON, para a barra do GNOME.
+"""Claude plan usage (5-hour and weekly limits) as JSON, for the GNOME top bar.
 
-Usa o login que o app Claude (aba Code) mantém em ~/.claude/.credentials.json
-e o mesmo endpoint do comando /usage. O endpoint não é documentado e pode mudar.
-O token nunca é renovado aqui (quem renova é o app) nem impresso. Se o login
-estiver vencido, devolve o último valor conhecido com "stale": true.
+Uses the login the Claude app (Code tab) keeps in ~/.claude/.credentials.json
+and the same endpoint as the /usage command. The endpoint is undocumented and may change.
+The token is never refreshed here (the app does that) nor printed. If the login
+has expired, returns the last known value with "stale": true.
 """
 import json
 import os
@@ -33,9 +33,9 @@ def fetch():
         with open(CREDENTIALS) as f:
             oauth = json.load(f)["claudeAiOauth"]
     except (OSError, ValueError, KeyError):
-        return from_cache("Faça login no app Claude")
+        return from_cache("Log in to the Claude app")
     if oauth.get("expiresAt", 0) / 1000 < time.time():
-        return from_cache("Login vencido: abra uma sessão na aba Code do app")
+        return from_cache("Login expired: open a session in the app's Code tab")
 
     req = urllib.request.Request(URL, headers={
         "Authorization": f"Bearer {oauth['accessToken']}",
@@ -46,9 +46,9 @@ def fetch():
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.load(r)
     except urllib.error.HTTPError as e:
-        return from_cache(f"Erro HTTP {e.code}")
+        return from_cache(f"HTTP error {e.code}")
     except (urllib.error.URLError, TimeoutError, ValueError):
-        return from_cache("Sem conexão")
+        return from_cache("No connection")
 
     out = {}
     for key, src in (("session", "five_hour"), ("weekly", "seven_day")):

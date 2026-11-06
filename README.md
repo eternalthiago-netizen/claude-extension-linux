@@ -1,31 +1,31 @@
-# gnome-claude-usage
+# Claude Usage for GNOME
 
-Extensão do GNOME Shell que mostra na barra superior quanto do plano Claude já foi usado: o limite de 5 horas e o semanal (`5h 12% · 7d 40%`).
+GNOME Shell extension that shows how much of your Claude plan you have used in the top bar: the 5-hour limit and the weekly limit (`5h 12% · 7d 40%`).
 
-- Cada valor fica laranja a partir de 80% e vermelho a partir de 90%, com notificação ao cruzar cada limite (uma vez por período).
-- O menu mostra quando cada limite reinicia.
-- Atualiza a cada 5 minutos. Sem conexão ou com o login vencido, mostra o último valor conhecido esmaecido.
+- Each value turns orange from 80% and red from 90%, with a notification when each threshold is crossed (once per period).
+- The menu shows when each limit resets.
+- Refreshes every 5 minutes. With no connection or an expired login, it shows the last known value dimmed.
 
-## Como funciona
+## How it works
 
-O script `claude_usage.py` (instalado como `claude-usage`) lê o login que o app Claude / Claude Code mantém em `~/.claude/.credentials.json` e consulta o mesmo endpoint usado pelo comando `/usage`. O token nunca é renovado nem impresso pelo script; quem renova é o próprio app.
+The `claude_usage.py` script (installed as `claude-usage`) reads the login the Claude app / Claude Code keeps in `~/.claude/.credentials.json` and queries the same endpoint used by the `/usage` command. The script never refreshes or prints the token; the app itself refreshes it.
 
-> O endpoint não é documentado e pode mudar sem aviso.
+> The endpoint is undocumented and may change without notice.
 
-## Instalação
+## Install
 
 ```bash
-./build-deb.sh            # gera dist/gnome-claude-usage_1.0.0_all.deb
+./build-deb.sh            # builds dist/gnome-claude-usage_1.0.0_all.deb
 sudo apt install ./dist/gnome-claude-usage_1.0.0_all.deb
 gnome-extensions enable claude-usage@local
 ```
 
-Reinicie o GNOME Shell (X11: Alt+F2, `r`, Enter; Wayland: sair e entrar de novo).
+Restart GNOME Shell (X11: Alt+F2, `r`, Enter; Wayland: log out and back in).
 
-Para outra versão: `./build-deb.sh 1.1.0`.
+For another version: `./build-deb.sh 1.1.0`.
 
-## Requisitos
+## Requirements
 
-- GNOME Shell 45 a 49
+- GNOME Shell 45 to 49
 - Python 3
-- Login feito no app Claude ou no Claude Code
+- Logged in to the Claude app or Claude Code

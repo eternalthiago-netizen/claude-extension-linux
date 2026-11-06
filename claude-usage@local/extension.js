@@ -11,14 +11,14 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
-// Pacote .deb instala em /usr/bin; instalação manual fica em ~/.local/bin
+// The .deb package installs to /usr/bin; a manual install lives in ~/.local/bin
 const SCRIPT = GLib.find_program_in_path('claude-usage') ??
     GLib.build_filenamev([GLib.get_home_dir(), '.local', 'bin', 'claude-usage']);
 const POLL_SECONDS = 300;
 const THRESHOLDS = [80, 90];
-// Alertas já enviados, por limite e período (resets_at): sobrevive a reinícios do Shell
+// Alerts already sent, per limit and period (resets_at): survives Shell restarts
 const ALERTS_FILE = GLib.build_filenamev([GLib.get_user_cache_dir(), 'claude-usage-alerts.json']);
-const LIMITS = {session: 'Sessão de 5 h', weekly: 'Limite semanal'};
+const LIMITS = {session: '5-hour session', weekly: 'Weekly limit'};
 
 function loadAlerts() {
     try {
@@ -67,14 +67,14 @@ function resetText(iso) {
         return '';
     const mins = Math.max(0, Math.round(dt.difference(GLib.DateTime.new_now_local()) / 60e6));
     const left = mins < 60 ? `${mins} min` : mins < 48 * 60
-        ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${Math.round(mins / 1440)} dias`;
-    return `reinicia ${dt.format('%d/%m %H:%M')} (em ${left})`;
+        ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${Math.round(mins / 1440)} days`;
+    return `resets ${dt.format('%b %d %H:%M')} (in ${left})`;
 }
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init() {
-        super._init(0.0, 'Uso do Claude');
+        super._init(0.0, 'Claude Usage');
 
         const box = new St.BoxLayout({style_class: 'panel-status-menu-box'});
         this._session = new St.Label({text: '5h …', y_align: Clutter.ActorAlign.CENTER});
@@ -86,15 +86,15 @@ class Indicator extends PanelMenu.Button {
         }
         this.add_child(box);
 
-        this._sessionItem = new PopupMenu.PopupMenuItem('Sessão (5 h)', {reactive: false});
-        this._weeklyItem = new PopupMenu.PopupMenuItem('Semanal', {reactive: false});
+        this._sessionItem = new PopupMenu.PopupMenuItem('Session (5 h)', {reactive: false});
+        this._weeklyItem = new PopupMenu.PopupMenuItem('Weekly', {reactive: false});
         this.menu.addMenuItem(this._sessionItem);
         this.menu.addMenuItem(this._weeklyItem);
         this._staleItem = new PopupMenu.PopupMenuItem('', {reactive: false});
         this._staleItem.visible = false;
         this.menu.addMenuItem(this._staleItem);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        const refresh = new PopupMenu.PopupMenuItem('Atualizar');
+        const refresh = new PopupMenu.PopupMenuItem('Refresh');
         refresh.connect('activate', () => this.refresh());
         this.menu.addMenuItem(refresh);
 
@@ -128,20 +128,20 @@ class Indicator extends PanelMenu.Button {
             return;
         }
         this._sep.visible = this._weekly.visible = true;
-        // Valor antigo (login vencido / sem rede): mostra apagado, com o motivo
+        // Old value (expired login / no network): shown dimmed, with the reason
         this.opacity = st.stale ? 140 : 255;
         this._session.text = `5h ${st.session ?? '—'}%`;
         this._weekly.text = `7d ${st.weekly ?? '—'}%`;
         this._session.style = color(st.session ?? 0);
         this._weekly.style = color(st.weekly ?? 0);
-        this._sessionItem.label.text = `Sessão (5 h): ${st.session ?? '—'}% · ${resetText(st.session_resets_at)}`;
-        this._weeklyItem.label.text = `Semanal: ${st.weekly ?? '—'}% · ${resetText(st.weekly_resets_at)}`;
+        this._sessionItem.label.text = `Session (5 h): ${st.session ?? '—'}% · ${resetText(st.session_resets_at)}`;
+        this._weeklyItem.label.text = `Weekly: ${st.weekly ?? '—'}% · ${resetText(st.weekly_resets_at)}`;
         if (!st.stale)
             this._checkAlerts(st);
         this._staleItem.visible = Boolean(st.stale);
         if (st.stale) {
-            const when = GLib.DateTime.new_from_unix_local(st.fetched_at ?? 0).format('%d/%m %H:%M');
-            this._staleItem.label.text = `Valor de ${when}. ${st.error}`;
+            const when = GLib.DateTime.new_from_unix_local(st.fetched_at ?? 0).format('%b %d %H:%M');
+            this._staleItem.label.text = `Value from ${when}. ${st.error}`;
         }
     }
 
@@ -153,19 +153,19 @@ class Indicator extends PanelMenu.Button {
             const period = st[`${key}_resets_at`];
             if (pct === null || pct === undefined || !period)
                 continue;
-            // Novo período (limite reiniciou): esquece os alertas anteriores
+            // New period (the limit reset): forget earlier alerts
             if (alerts[key]?.period !== period) {
                 alerts[key] = {period, sent: []};
                 changed = true;
             }
-            // Só o maior limiar ultrapassado e ainda não avisado
+            // Only the highest threshold crossed and not yet alerted
             const hit = THRESHOLDS.filter(t => pct >= t && !alerts[key].sent.includes(t));
             if (hit.length === 0)
                 continue;
             const top = Math.max(...hit);
             alerts[key].sent.push(...hit);
             changed = true;
-            this._notify(`${name}: ${pct}% usado`,
+            this._notify(`${name}: ${pct}% used`,
                 `${resetText(period).replace(/^r/, 'R')}.`, top >= 90);
         }
         if (changed)
@@ -194,7 +194,7 @@ class Indicator extends PanelMenu.Button {
 export default class ClaudeUsageExtension extends Extension {
     enable() {
         this._indicator = new Indicator();
-        // posição 0 da área direita = ao lado do indicador do fone
+        // position 0 of the right box = next to the headset indicator
         Main.panel.addToStatusArea(this.uuid, this._indicator, 0, 'right');
     }
 
